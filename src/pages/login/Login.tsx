@@ -1,6 +1,6 @@
-import './Signin.scss';
+import './Login.scss';
 
-function Signin() {
+function Login() {
     return (
         <main className="main bg-dark">
             <section className="sign-in-content">
@@ -27,4 +27,4 @@ function Signin() {
     )
 }
 
-export default Signin;
+export default Login;
