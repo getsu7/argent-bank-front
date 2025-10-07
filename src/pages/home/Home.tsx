@@ -1,10 +1,10 @@
-import './App.scss'
-import iconChat from './assets/icon-chat.png';
-import iconMoney from './assets/icon-money.png';
-import iconSecurity from './assets/icon-security.png';
-import Feature from "./components/feature/Feature.tsx";
+import './Home.scss'
+import iconChat from '../../assets/icon-chat.png';
+import iconMoney from '../../assets/icon-money.png';
+import iconSecurity from '../../assets/icon-security.png';
+import Feature from "../../components/feature/Feature.tsx";
 
-function App() {
+function Home() {
 
     const featuresContent = [
         {
@@ -45,4 +45,4 @@ function App() {
     )
 }
 
-export default App
+export default Home
