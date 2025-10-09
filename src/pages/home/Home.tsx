@@ -37,8 +37,8 @@ function Home() {
             </div>
             <section className="features">
                 <h2 className="sr-only">Features</h2>
-                {featuresContent.map((feature) => (
-                    <Feature title={feature.title} image={feature.image} text={feature.text}/>
+                {featuresContent.map((feature, index) => (
+                    <Feature key={index} title={feature.title} image={feature.image} text={feature.text}/>
                 ))}
             </section>
         </main>
