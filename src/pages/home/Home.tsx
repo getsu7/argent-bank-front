@@ -1,4 +1,5 @@
 import './Home.scss'
+import {useMemo} from 'react';
 import iconChat from '../../assets/icon-chat.png';
 import iconMoney from '../../assets/icon-money.png';
 import iconSecurity from '../../assets/icon-security.png';
@@ -6,7 +7,7 @@ import Feature from "../../components/feature/Feature.tsx";
 
 function Home() {
 
-    const featuresContent = [
+    const featuresContent = useMemo(() => [
         {
             title: 'You are our #1 priority',
             image: iconChat,
@@ -22,7 +23,7 @@ function Home() {
             image: iconSecurity,
             text: 'We use top of the line encryption to make sure your data and money is always safe.'
         }
-    ]
+    ], []);
 
     return (
         <main>

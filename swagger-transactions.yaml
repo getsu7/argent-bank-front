@@ -1,0 +1,697 @@
+openapi: 3.0.3
+info:
+  title: Argent Bank - API Transactions
+  description: |
+    Spécification des endpoints API pour la gestion des transactions bancaires.
+    
+    Cette API permet aux utilisateurs de :
+    - Visualiser toutes leurs transactions pour le mois en cours, groupées par compte
+    - Visualiser les détails d'une transaction spécifique
+    - Ajouter, modifier ou supprimer des informations sur une transaction
+    
+    **Authentification** : Toutes les routes nécessitent un token JWT valide dans le header Authorization.
+  version: 1.0.0
+  contact:
+    name: Argent Bank API Support
+    email: support@argentbank.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: http://localhost:3001/api/v1
+    description: Serveur de développement local
+  - url: https://api.argentbank.com/v1
+    description: Serveur de production
+
+security:
+  - BearerAuth: [ ]
+
+tags:
+  - name: Transactions
+    description: Opérations liées aux transactions bancaires
+
+paths:
+  /accounts/{accountId}/transactions:
+    get:
+      tags:
+        - Transactions
+      summary: Récupère les transactions d'un compte
+      description: |
+        Retourne toutes les transactions pour un compte spécifique.
+        Par défaut, retourne les transactions du mois en cours.
+        Possibilité de filtrer par période avec les paramètres optionnels.
+      operationId: getAccountTransactions
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          description: Identifiant unique du compte bancaire
+          schema:
+            type: string
+            example: acc_001
+        - name: month
+          in: query
+          required: false
+          description: |
+            Mois pour filtrer les transactions (format: YYYY-MM).
+            Par défaut: mois en cours.
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}$'
+            example: "2025-10"
+        - name: startDate
+          in: query
+          required: false
+          description:
+            Date de début pour filtrer les transactions (format: YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+            example: "2025-10-01"
+        - name: endDate
+          in: query
+          required: false
+          description:
+            Date de fin pour filtrer les transactions (format: YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+            example: "2025-10-31"
+        - name: page
+          in: query
+          required: false
+          description: Numéro de page pour la pagination (commence à 1)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          required: false
+          description: Nombre de transactions par page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 20
+        - name: sortBy
+          in: query
+          required: false
+          description: Champ pour trier les transactions
+          schema:
+            type: string
+            enum: [ date, amount, description ]
+            default: date
+            example: date
+        - name: sortOrder
+          in: query
+          required: false
+          description: Ordre de tri
+          schema:
+            type: string
+            enum: [ asc, desc ]
+            default: desc
+            example: desc
+      responses:
+        '200':
+          description: Transactions récupérées avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: Transactions retrieved successfully
+                  body:
+                    type: object
+                    properties:
+                      transactions:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Transaction'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+              examples:
+                success:
+                  summary: Exemple de réponse avec transactions
+                  value:
+                    status: 200
+                    message: Transactions retrieved successfully
+                    body:
+                      transactions:
+                        - transactionId: "txn_001"
+                          accountId: "acc_001"
+                          date: "2025-10-20"
+                          description: "Golden Sun Bakery"
+                          amount: -5.00
+                          balance: 2082.79
+                          type: "debit"
+                          category: "Food"
+                          notes: ""
+                        - transactionId: "txn_002"
+                          accountId: "acc_001"
+                          date: "2025-10-19"
+                          description: "Salary - October 2025"
+                          amount: 3500.00
+                          balance: 2087.79
+                          type: "credit"
+                          category: "Income"
+                          notes: "Monthly salary"
+                      pagination:
+                        currentPage: 1
+                        totalPages: 5
+                        totalItems: 94
+                        itemsPerPage: 20
+                        hasNextPage: true
+                        hasPreviousPage: false
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Accès interdit - L'utilisateur n'a pas accès à ce compte
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                status: 403
+                message: Access denied - This account does not belong to you
+        '404':
+          description: Compte non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                status: 404
+                message: Account not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /transactions/{transactionId}:
+    get:
+      tags:
+        - Transactions
+      summary: Récupère les détails d'une transaction
+      description: |
+        Retourne les détails complets d'une transaction spécifique.
+        Utilisé pour afficher une vue détaillée de la transaction.
+      operationId: getTransactionDetails
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          description: Identifiant unique de la transaction
+          schema:
+            type: string
+            example: txn_001
+      responses:
+        '200':
+          description: Détails de la transaction récupérés avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: Transaction details retrieved successfully
+                  body:
+                    $ref: '#/components/schemas/TransactionDetail'
+              examples:
+                success:
+                  summary: Exemple de transaction détaillée
+                  value:
+                    status: 200
+                    message: Transaction details retrieved successfully
+                    body:
+                      transactionId: "txn_001"
+                      accountId: "acc_001"
+                      date: "2025-10-20"
+                      description: "Golden Sun Bakery"
+                      amount: -5.00
+                      balance: 2082.79
+                      type: "debit"
+                      category: "Food"
+                      notes: "Lunch with colleagues"
+                      merchantName: "Golden Sun Bakery"
+                      merchantAddress: "123 Main St, New York, NY 10001"
+                      paymentMethod: "debit_card"
+                      cardLastFourDigits: "4242"
+                      transactionType: "purchase"
+                      status: "completed"
+                      createdAt: "2025-10-20T12:34:56Z"
+                      updatedAt: "2025-10-20T12:34:56Z"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Accès interdit - Cette transaction n'appartient pas à l'utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                status: 403
+                message: Access denied - This transaction does not belong to you
+        '404':
+          description: Transaction non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                status: 404
+                message: Transaction not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags:
+        - Transactions
+      summary: Modifie les informations d'une transaction
+      description: |
+        Permet de modifier les informations éditables d'une transaction existante.
+        Seules certaines informations peuvent être modifiées (catégorie, notes).
+        Les informations financières (montant, date) ne peuvent pas être modifiées.
+      operationId: updateTransaction
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          description: Identifiant unique de la transaction à modifier
+          schema:
+            type: string
+            example: txn_001
+      requestBody:
+        required: true
+        description: Informations à modifier sur la transaction
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionUpdate'
+            examples:
+              updateCategory:
+                summary: Modifier la catégorie
+                value:
+                  category: "Restaurant"
+              updateNotes:
+                summary: Ajouter des notes
+                value:
+                  notes: "Business lunch - reimbursable"
+              updateBoth:
+                summary: Modifier catégorie et notes
+                value:
+                  category: "Business"
+                  notes: "Team lunch - Project kickoff"
+      responses:
+        '200':
+          description: Transaction modifiée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: Transaction updated successfully
+                  body:
+                    $ref: '#/components/schemas/TransactionDetail'
+              examples:
+                success:
+                  summary: Transaction mise à jour
+                  value:
+                    status: 200
+                    message: Transaction updated successfully
+                    body:
+                      transactionId: "txn_001"
+                      accountId: "acc_001"
+                      date: "2025-10-20"
+                      description: "Golden Sun Bakery"
+                      amount: -5.00
+                      balance: 2082.79
+                      type: "debit"
+                      category: "Business"
+                      notes: "Team lunch - Project kickoff"
+                      updatedAt: "2025-10-23T14:22:10Z"
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Accès interdit - Cette transaction n'appartient pas à l'utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                status: 403
+                message: Access denied - You cannot modify this transaction
+        '404':
+          description: Transaction non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                status: 404
+                message: Transaction not found
+        '422':
+          description: Entité non traitable - Validation échouée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                status: 422
+                message: Validation failed
+                errors:
+                  category: "Invalid category. Must be one of: Food, Transport, Shopping, Bills, Income, Entertainment, Health, Other"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Transactions
+      summary: Supprime les informations personnalisées d'une transaction
+      description: |
+        Supprime les informations personnalisées (catégorie, notes) d'une transaction.
+        La transaction elle-même n'est pas supprimée, seules les données ajoutées par l'utilisateur sont réinitialisées.
+        Les informations financières de base restent intactes.
+      operationId: deleteTransactionInfo
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          description: Identifiant unique de la transaction
+          schema:
+            type: string
+            example: txn_001
+      responses:
+        '200':
+          description: Informations de la transaction supprimées avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: Transaction information deleted successfully
+                  body:
+                    $ref: '#/components/schemas/TransactionDetail'
+              examples:
+                success:
+                  summary: Informations réinitialisées
+                  value:
+                    status: 200
+                    message: Transaction information deleted successfully
+                    body:
+                      transactionId: "txn_001"
+                      accountId: "acc_001"
+                      date: "2025-10-20"
+                      description: "Golden Sun Bakery"
+                      amount: -5.00
+                      balance: 2082.79
+                      type: "debit"
+                      category: ""
+                      notes: ""
+                      updatedAt: "2025-10-23T15:30:00Z"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Accès interdit - Cette transaction n'appartient pas à l'utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                status: 403
+                message: Access denied - You cannot delete information from this transaction
+        '404':
+          description: Transaction non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                status: 404
+                message: Transaction not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Authentification par token JWT.
+        Format du header: `Authorization: Bearer {token}`
+
+  schemas:
+    Transaction:
+      type: object
+      required:
+        - transactionId
+        - accountId
+        - date
+        - description
+        - amount
+        - balance
+        - type
+      properties:
+        transactionId:
+          type: string
+          description: Identifiant unique de la transaction
+          example: txn_001
+        accountId:
+          type: string
+          description: Identifiant du compte associé
+          example: acc_001
+        date:
+          type: string
+          format: date
+          description: Date de la transaction
+          example: "2025-10-20"
+        description:
+          type: string
+          description: Description de la transaction
+          example: "Golden Sun Bakery"
+        amount:
+          type: number
+          format: double
+          description: Montant de la transaction (négatif pour débit, positif pour crédit)
+          example: -5.00
+        balance:
+          type: number
+          format: double
+          description: Solde du compte après la transaction
+          example: 2082.79
+        type:
+          type: string
+          description: Type de transaction
+          enum: [ debit, credit ]
+          example: debit
+        category:
+          type: string
+          description: Catégorie de la transaction (modifiable par l'utilisateur)
+          enum: [ "", Food, Transport, Shopping, Bills, Income, Entertainment, Health, Business, Other ]
+          example: Food
+        notes:
+          type: string
+          description: Notes personnelles sur la transaction (modifiable par l'utilisateur)
+          maxLength: 500
+          example: "Lunch with colleagues"
+
+    TransactionDetail:
+      allOf:
+        - $ref: '#/components/schemas/Transaction'
+        - type: object
+          properties:
+            merchantName:
+              type: string
+              description: Nom du commerçant
+              example: "Golden Sun Bakery"
+            merchantAddress:
+              type: string
+              description: Adresse du commerçant
+              example: "123 Main St, New York, NY 10001"
+            paymentMethod:
+              type: string
+              description: Méthode de paiement utilisée
+              enum: [ debit_card, credit_card, transfer, check, cash, direct_debit ]
+              example: debit_card
+            cardLastFourDigits:
+              type: string
+              description: 4 derniers chiffres de la carte utilisée (si applicable)
+              pattern: '^\d{4}$'
+              example: "4242"
+            transactionType:
+              type: string
+              description: Type spécifique de transaction
+              enum: [ purchase, withdrawal, deposit, transfer_in, transfer_out, fee, refund, interest ]
+              example: purchase
+            status:
+              type: string
+              description: Statut de la transaction
+              enum: [ pending, completed, cancelled, failed ]
+              example: completed
+            createdAt:
+              type: string
+              format: date-time
+              description: Date de création de la transaction
+              example: "2025-10-20T12:34:56Z"
+            updatedAt:
+              type: string
+              format: date-time
+              description: Date de dernière modification
+              example: "2025-10-23T14:22:10Z"
+
+    TransactionUpdate:
+      type: object
+      description: Champs modifiables d'une transaction
+      minProperties: 1
+      properties:
+        category:
+          type: string
+          description: Catégorie de la transaction
+          enum: [ "", Food, Transport, Shopping, Bills, Income, Entertainment, Health, Business, Other ]
+          example: Business
+        notes:
+          type: string
+          description: Notes personnelles sur la transaction
+          maxLength: 500
+          example: "Business lunch - reimbursable"
+
+    Pagination:
+      type: object
+      required:
+        - currentPage
+        - totalPages
+        - totalItems
+        - itemsPerPage
+        - hasNextPage
+        - hasPreviousPage
+      properties:
+        currentPage:
+          type: integer
+          description: Page actuelle
+          minimum: 1
+          example: 1
+        totalPages:
+          type: integer
+          description: Nombre total de pages
+          minimum: 0
+          example: 5
+        totalItems:
+          type: integer
+          description: Nombre total d'éléments
+          minimum: 0
+          example: 94
+        itemsPerPage:
+          type: integer
+          description: Nombre d'éléments par page
+          minimum: 1
+          example: 20
+        hasNextPage:
+          type: boolean
+          description: Indique s'il y a une page suivante
+          example: true
+        hasPreviousPage:
+          type: boolean
+          description: Indique s'il y a une page précédente
+          example: false
+
+    Error:
+      type: object
+      required:
+        - status
+        - message
+      properties:
+        status:
+          type: integer
+          description: Code de statut HTTP
+          example: 400
+        message:
+          type: string
+          description: Message d'erreur
+          example: Bad Request
+        errors:
+          type: object
+          description: Détails supplémentaires sur les erreurs de validation
+          additionalProperties:
+            type: string
+
+  responses:
+    BadRequestError:
+      description: Requête invalide - Paramètres manquants ou incorrects
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            invalidParameters:
+              summary: Paramètres invalides
+              value:
+                status: 400
+                message: Invalid request parameters
+                errors:
+                  month: "Invalid month format. Expected YYYY-MM"
+            missingField:
+              summary: Champ requis manquant
+              value:
+                status: 400
+                message: Validation failed
+                errors:
+                  category: "Category is required"
+
+    UnauthorizedError:
+      description: Non authentifié - Token manquant ou invalide
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            missingToken:
+              summary: Token manquant
+              value:
+                status: 401
+                message: Authorization header missing
+            invalidToken:
+              summary: Token invalide
+              value:
+                status: 401
+                message: Invalid or expired token
+            expiredToken:
+              summary: Token expiré
+              value:
+                status: 401
+                message: Token has expired
+
+    InternalServerError:
+      description: Erreur interne du serveur
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            status: 500
+            message: Internal server error

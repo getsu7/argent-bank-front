@@ -1,28 +1,20 @@
 import './Navigation.scss';
 import {Link, useLocation, useNavigate} from 'react-router-dom';
 import logoImg from '../../assets/argentBankLogo.png';
-import {useSelector, useDispatch} from "react-redux";
-import {useEffect, useState} from "react";
-import type {User} from "../../models/UserTypes.ts";
-import type {UserState} from "../../store/user.ts";
-import {clearUser} from "../../store/user.ts";
+import {useAppDispatch, useAppSelector} from "../../store/hooks";
+import {clearUser} from "../../store/user";
+import {persistor} from "../../store/store";
 
 
 function Navigation() {
     const location = useLocation();
     const navigate = useNavigate();
-    const dispatch = useDispatch();
-    const userStore = useSelector((state: UserState) => state.user);
-    const [user, setUser] = useState<User | null>(null);
-
-    useEffect(() => {
-        if (userStore.user) {
-            setUser(userStore.user);
-        }
-    }, [userStore.user]);
+    const dispatch = useAppDispatch();
+    const user = useAppSelector((state) => state.user.user);
 
     const handleLogout = () => {
         dispatch(clearUser());
+        persistor.purge();
         navigate('/');
     };
 
