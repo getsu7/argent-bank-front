@@ -63,7 +63,7 @@ const handleApiError = async (response: Response, context: string): Promise<neve
 
 export const UserService = () => {
 
-    async function login(userCredentials: UserCredentials): Promise<string> {
+    const login = async (userCredentials: UserCredentials): Promise<string> => {
         try {
             const response = await fetch(ENDPOINT_LOGIN, {
                 method: "POST",
@@ -97,7 +97,7 @@ export const UserService = () => {
         }
     }
 
-    async function searchProfile(token: string): Promise<User> {
+    const searchProfile = async (token: string): Promise<User> => {
         try {
             const response = await fetch(ENDPOINT_PROFILE, {
                 method: "POST",
@@ -131,7 +131,7 @@ export const UserService = () => {
         }
     }
 
-    async function updateProfile(token: string, data: UpdateProfileData): Promise<User> {
+    const updateProfile = async (token: string, data: UpdateProfileData): Promise<User> => {
         try {
             const response = await fetch(ENDPOINT_PROFILE, {
                 method: "PUT",
